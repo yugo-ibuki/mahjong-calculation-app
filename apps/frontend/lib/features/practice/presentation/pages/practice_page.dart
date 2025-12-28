@@ -1,85 +1,74 @@
 import 'package:flutter/material.dart';
-import '../../data/repositories/mock_question_repository.dart';
-import '../../domain/models/question.dart';
-import '../../domain/services/question_randomizer.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/practice_provider.dart';
 import '../widgets/hand_widget.dart';
 
-class PracticePage extends StatefulWidget {
+class PracticePage extends ConsumerWidget {
   const PracticePage({super.key});
 
   @override
-  State<PracticePage> createState() => _PracticePageState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(practiceProvider);
+    final currentQuestion = state.currentQuestion;
 
-class _PracticePageState extends State<PracticePage> {
-  late List<Question> _allQuestions;
-  late Question _currentQuestion;
-  int? _selectedIndex;
-  bool _isAnswered = false;
+    if (currentQuestion == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
-  @override
-  void initState() {
-    super.initState();
-    _allQuestions = MockQuestionRepository.questions;
-    _nextQuestion();
-  }
-
-  void _nextQuestion() {
-    setState(() {
-      final baseQuestion = _allQuestions[DateTime.now().millisecond % _allQuestions.length];
-      _currentQuestion = QuestionRandomizer.randomize(baseQuestion);
-      _selectedIndex = null;
-      _isAnswered = false;
-    });
-  }
-
-  void _checkAnswer(int index) {
-    if (_isAnswered) return;
-    setState(() {
-      _selectedIndex = index;
-      _isAnswered = true;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isCorrect = _selectedIndex == _currentQuestion.correctChoiceIndex;
+    final isCorrect = state.selectedIndex == currentQuestion.correctChoiceIndex;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('符計算練習')),
+      backgroundColor: Colors.grey.shade50,
+      appBar: AppBar(
+        title: const Text('符計算練習'),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _buildInfoRow(),
+            _buildInfoCard(context, currentQuestion),
             const SizedBox(height: 24),
             HandWidget(
-              groups: _currentQuestion.groups,
-              winningGroupIndex: _currentQuestion.winningGroupIndex,
+              groups: currentQuestion.groups,
+              winningGroupIndex: currentQuestion.winningGroupIndex,
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
             const Text(
               'この和了の点数は？',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
             ),
             const SizedBox(height: 24),
-            _buildChoices(),
-            if (_isAnswered) _buildExplanation(isCorrect),
+            _buildChoices(context, ref, state),
+            if (state.isAnswered) _buildExplanation(context, ref, currentQuestion, isCorrect),
           ],
         ),
       ),
-      bottomNavigationBar: _isAnswered
-          ? SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
+      bottomNavigationBar: state.isAnswered
+          ? Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, -5),
+                  ),
+                ],
+              ),
+              child: SafeArea(
                 child: ElevatedButton(
-                  onPressed: _nextQuestion,
+                  onPressed: () => ref.read(practiceProvider.notifier).nextQuestion(),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(context).colorScheme.primary,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    minimumSize: const Size(double.infinity, 56),
                   ),
                   child: const Text('次の問題へ', style: TextStyle(fontSize: 18)),
                 ),
@@ -89,129 +78,239 @@ class _PracticePageState extends State<PracticePage> {
     );
   }
 
-  Widget _buildInfoRow() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: [
-        _InfoChip(label: '状況', value: _currentQuestion.isTsumo ? 'ツモ' : 'ロン'),
-        _InfoChip(label: '親/子', value: _currentQuestion.isDealer ? '親' : '子'),
-        _InfoChip(label: '場/自', value: '${_currentQuestion.roundWind.toUpperCase()}/${_currentQuestion.seatWind.toUpperCase()}'),
-        _InfoChip(label: '役', value: '${_currentQuestion.han}翻'),
-      ],
+  Widget _buildInfoCard(BuildContext context, dynamic question) {
+    return Card(
+      elevation: 0,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _InfoItem(label: '状況', value: question.isTsumo ? 'ツモ' : 'ロン', icon: Icons.pan_tool_alt),
+            _InfoItem(label: '親/子', value: question.isDealer ? '親' : '子', icon: Icons.person),
+            _InfoItem(label: '場/自', value: '${question.roundWind.toUpperCase()}/${question.seatWind.toUpperCase()}', icon: Icons.explore),
+            _InfoItem(label: '役', value: '${question.han}翻', icon: Icons.stars, color: Colors.orange.shade700),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildChoices() {
+  Widget _buildChoices(BuildContext context, WidgetRef ref, dynamic state) {
+    final question = state.currentQuestion;
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: 2.5,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
+        childAspectRatio: 2.2,
+        mainAxisSpacing: 16,
+        crossAxisSpacing: 16,
       ),
-      itemCount: _currentQuestion.choices.length,
+      itemCount: question.choices.length,
       itemBuilder: (context, index) {
-        final choice = _currentQuestion.choices[index];
-        bool isThisCorrect = index == _currentQuestion.correctChoiceIndex;
-        bool isThisSelected = index == _selectedIndex;
+        final choice = question.choices[index];
+        bool isThisCorrect = index == question.correctChoiceIndex;
+        bool isThisSelected = index == state.selectedIndex;
 
-        Color? bgColor;
-        if (_isAnswered) {
-          if (isThisCorrect) bgColor = Colors.green.shade100;
-          else if (isThisSelected) bgColor = Colors.red.shade100;
+        Color bgColor = Colors.white;
+        Color textColor = Colors.black87;
+        BorderSide? border;
+
+        if (state.isAnswered) {
+          if (isThisCorrect) {
+            bgColor = Colors.green.shade50;
+            textColor = Colors.green.shade700;
+            border = BorderSide(color: Colors.green.shade300, width: 2);
+          } else if (isThisSelected) {
+            bgColor = Colors.red.shade50;
+            textColor = Colors.red.shade700;
+            border = BorderSide(color: Colors.red.shade300, width: 2);
+          }
+        } else {
+          border = BorderSide(color: Colors.grey.shade300);
         }
 
-        return ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: bgColor,
-            side: isThisSelected ? BorderSide(color: Theme.of(context).colorScheme.primary, width: 2) : null,
-          ),
-          onPressed: () => _checkAnswer(index),
-          child: Text(
-            '${choice.total}点',
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        return InkWell(
+          onTap: () => ref.read(practiceProvider.notifier).selectChoice(index),
+          borderRadius: BorderRadius.circular(16),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(16),
+              border: border != null ? Border.fromBorderSide(border) : null,
+              boxShadow: state.isAnswered ? null : [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              '${choice.total}点',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: textColor,
+              ),
+            ),
           ),
         );
       },
     );
   }
 
-  Widget _buildExplanation(bool isCorrect) {
-    return Card(
-      margin: const EdgeInsets.only(top: 24),
-      color: isCorrect ? Colors.green.shade50 : Colors.red.shade50,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  isCorrect ? Icons.check_circle : Icons.cancel,
-                  color: isCorrect ? Colors.green : Colors.red,
+  Widget _buildExplanation(BuildContext context, WidgetRef ref, dynamic question, bool isCorrect) {
+    return Container(
+      margin: const EdgeInsets.only(top: 32, bottom: 80),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: isCorrect ? Colors.green.shade50 : Colors.red.shade50,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: isCorrect ? Colors.green.shade100 : Colors.red.shade100),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                isCorrect ? Icons.check_circle : Icons.cancel,
+                color: isCorrect ? Colors.green : Colors.red,
+                size: 28,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                isCorrect ? '正解です！' : '残念、不正解です',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: isCorrect ? Colors.green.shade700 : Colors.red.shade700,
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  isCorrect ? '正解！' : '不正解...',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: isCorrect ? Colors.green : Colors.red,
-                  ),
-                ),
-              ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Text(
+            '正解: ${question.correctScore.total}点',
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87),
+          ),
+          if (question.isTsumo && question.correctScore.dealer != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                '配分: ${question.correctScore.nonDealer ?? ""}-${question.correctScore.dealer}',
+                style: TextStyle(fontSize: 16, color: Colors.grey.shade700),
+              ),
             ),
-            const SizedBox(height: 16),
-            Text(
-              '正解: ${_currentQuestion.correctScore.total}点',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Divider(),
+          ),
+          const Text(
+            '解説',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+          ),
+          const SizedBox(height: 12),
+          _buildFuDetail(question),
+          const SizedBox(height: 16),
+          Text(
+            question.explanation,
+            style: const TextStyle(fontSize: 16, height: 1.6, color: Colors.black87),
+          ),
+          const SizedBox(height: 24),
+          OutlinedButton.icon(
+            onPressed: () => context.push('/explanation'),
+            icon: const Icon(Icons.menu_book),
+            label: const Text('符計算の解説を読み直す'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            if (_currentQuestion.isTsumo && _currentQuestion.correctScore.dealer != null)
-              Text('配分: ${_currentQuestion.correctScore.nonDealer ?? ""}-${_currentQuestion.correctScore.dealer}'),
-            const Divider(),
-            const Text('【解説】', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 4),
-            Text('符の内訳: ${_currentQuestion.fuBreakdown.map((f) => "${f['name']}(${f['fu']}符)").join(' + ')}'),
-            Text('合計: ${_currentQuestion.fu}符 ${_currentQuestion.han}翻'),
-            const SizedBox(height: 8),
-            Text(_currentQuestion.explanation),
-            const SizedBox(height: 16),
-            TextButton.icon(
-              onPressed: () => Navigator.pushNamed(context, '/explanation'),
-              icon: const Icon(Icons.menu_book),
-              label: const Text('符計算の解説ページを見る'),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
-}
 
-class _InfoChip extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _InfoChip({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildFuDetail(dynamic question) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(20),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Column(
         children: [
-          Text('$label: ', style: const TextStyle(fontSize: 12, color: Colors.black54)),
-          Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+          ...question.fuBreakdown.map<Widget>((f) => Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(f['name'].toString(), style: const TextStyle(fontSize: 14)),
+                Text('${f['fu']}符', style: const TextStyle(fontWeight: FontWeight.bold)),
+              ],
+            ),
+          )).toList(),
+          const Divider(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('合計', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text(
+                '${question.fu}符 ${question.han}翻',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: Colors.green.shade700,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
 }
+
+class _InfoItem extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color? color;
+
+  const _InfoItem({
+    required this.label,
+    required this.value,
+    required this.icon,
+    this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Icon(icon, size: 20, color: color ?? Colors.grey.shade600),
+        const SizedBox(height: 4),
+        Text(label, style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+            color: color ?? Colors.black87,
+          ),
+        ),
+      ],
+    );
+  }
+}
+

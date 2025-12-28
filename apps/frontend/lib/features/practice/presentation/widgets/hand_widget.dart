@@ -32,7 +32,16 @@ class HandWidget extends StatelessWidget {
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
-            children: group.tiles.map((tile) => MahjongTile(tile: tile)).toList(),
+            children: group.tiles.asMap().entries.map((tileEntry) {
+              final tileIndex = tileEntry.key;
+              final tile = tileEntry.value;
+              final isLastTile = tileIndex == group.tiles.length - 1;
+              
+              return MahjongTile(
+                tile: tile,
+                isWinningTile: isWinningGroup && isLastTile,
+              );
+            }).toList(),
           ),
         );
       }).toList(),
