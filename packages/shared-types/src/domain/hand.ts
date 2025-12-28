@@ -1,4 +1,4 @@
-import type { Tile, TileGroup, HonorType } from './tile.js'
+import type { Tile, TileGroup } from './tile.js'
 
 /**
  * 風
