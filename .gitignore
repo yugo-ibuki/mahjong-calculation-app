@@ -41,12 +41,26 @@ terraform/*.tfstate.*
 terraform/*.tfplan
 *.tfvars.local
 
-# Flutter
-apps/frontend/.dart_tool/
+# Flutter/Dart
+.dart_tool/
+*.dart_tool/
 apps/frontend/build/
-apps/frontend/.packages
-apps/frontend/.flutter-plugins
-apps/frontend/.flutter-plugins-dependencies
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Android
+android/.gradle/
+android/app/build/
+android/local.properties
+*.jks
+*.keystore
+
+# iOS
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
 
 # Coverage
 coverage/
