@@ -50,10 +50,10 @@ apps/backend/
 
 ```typescript
 // src/index.ts
-import { initializeApp } from 'firebase-admin/app';
-
-// Firebase Admin 初期化
-initializeApp();
+// NOTE: 現在はFirestoreを使用せずハードコードでデータを管理しているため、
+// Firebase Admin初期化は不要です。Firestore使用時は以下を有効化してください。
+// import { initializeApp } from 'firebase-admin/app';
+// initializeApp();
 
 // 関数のエクスポート
 export { calculateScore } from './functions/calculation';
@@ -199,49 +199,46 @@ export class MahjongService {
 }
 ```
 
-### 履歴サービス
+### 履歴サービス（ハードコード版）
+
+> **NOTE**: 現在はFirestoreを使用せず、インメモリでデータを管理するモック実装です。
+> 将来的にFirestoreに置き換え可能です。
 
 ```typescript
 // src/services/history.service.ts
-import { getFirestore, Timestamp } from 'firebase-admin/firestore';
-import type { Hand, GameContext, ScoreResult } from '@mahjong/shared-types';
-
 interface HistoryEntry {
+  id: string;
   userId: string;
-  hand: Hand;
-  context: GameContext;
-  result: ScoreResult;
-  createdAt: Timestamp;
+  hand: unknown;
+  context: unknown;
+  result: unknown;
+  createdAt: Date;
 }
 
+// インメモリで履歴を管理
+const inMemoryHistory: HistoryEntry[] = [];
+
 export class HistoryService {
-  private db = getFirestore();
-  private collection = this.db.collection('history');
-
   async getByUserId(userId: string, limit: number): Promise<HistoryEntry[]> {
-    const snapshot = await this.collection
-      .where('userId', '==', userId)
-      .orderBy('createdAt', 'desc')
-      .limit(limit)
-      .get();
-
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    } as HistoryEntry & { id: string }));
+    return inMemoryHistory
+      .filter((entry) => entry.userId === userId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(0, limit);
   }
 
   async save(
     userId: string,
-    data: { hand: Hand; context: GameContext; result: ScoreResult }
+    data: { hand: unknown; context: unknown; result: unknown }
   ): Promise<string> {
-    const docRef = await this.collection.add({
+    const id = `${Date.now()}`;
+    const newEntry: HistoryEntry = {
+      id,
       userId,
       ...data,
-      createdAt: Timestamp.now(),
-    });
-
-    return docRef.id;
+      createdAt: new Date(),
+    };
+    inMemoryHistory.push(newEntry);
+    return id;
   }
 }
 ```
