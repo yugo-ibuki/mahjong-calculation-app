@@ -1,0 +1,6 @@
+# 開発環境設定例
+# このファイルを terraform.tfvars にリネームして使用してください
+
+project_id  = "mahjong-calculation-app"
+region      = "asia-northeast1"
+alert_email = "your-email@example.com"
