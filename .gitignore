@@ -1,0 +1,57 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# Terraform
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/*.tfplan
+*.tfvars.local
+
+# Flutter
+apps/frontend/.dart_tool/
+apps/frontend/build/
+apps/frontend/.packages
+apps/frontend/.flutter-plugins
+apps/frontend/.flutter-plugins-dependencies
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Misc
+*.tgz
+.cache/
