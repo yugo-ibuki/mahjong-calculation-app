@@ -30,6 +30,12 @@ importers:
         specifier: ^8.57.0
         version: 8.57.1
 
+  packages/shared-types:
+    devDependencies:
+      typescript:
+        specifier: ^5.0.0
+        version: 5.9.3
+
 packages:
 
   '@eslint-community/eslint-utils@4.9.0':
