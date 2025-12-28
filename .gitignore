@@ -35,11 +35,12 @@ firestore-debug.log
 ui-debug.log
 
 # Terraform
-terraform/.terraform/
-terraform/*.tfstate
-terraform/*.tfstate.*
-terraform/*.tfplan
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
 *.tfvars.local
+.terraform.lock.hcl
 
 # Flutter/Dart
 .dart_tool/
