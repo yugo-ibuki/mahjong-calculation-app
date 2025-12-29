@@ -49,6 +49,14 @@ class HomePage extends StatelessWidget {
               ),
               const SizedBox(height: 20),
               _MenuButton(
+                icon: Icons.calculate_rounded,
+                label: '点数計算ツール',
+                description: '手牌を入力して点数を計算します',
+                onPressed: () => context.push(AppRoutes.calculation),
+                isPrimary: false,
+              ),
+              const SizedBox(height: 20),
+              _MenuButton(
                 icon: Icons.menu_book_rounded,
                 label: '符計算の解説',
                 description: '符の基本と種類を体系的に学びます',
