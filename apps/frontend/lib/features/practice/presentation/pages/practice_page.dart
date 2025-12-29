@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../providers/practice_provider.dart';
 import '../widgets/hand_widget.dart';
 
@@ -12,9 +13,7 @@ class PracticePage extends ConsumerWidget {
     final currentQuestion = state.currentQuestion;
 
     if (currentQuestion == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     final isCorrect = state.selectedIndex == currentQuestion.correctChoiceIndex;
@@ -41,11 +40,16 @@ class PracticePage extends ConsumerWidget {
             const Text(
               'この和了の点数は？',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
             ),
             const SizedBox(height: 24),
             _buildChoices(context, ref, state),
-            if (state.isAnswered) _buildExplanation(context, ref, currentQuestion, isCorrect),
+            if (state.isAnswered)
+              _buildExplanation(context, ref, currentQuestion, isCorrect),
           ],
         ),
       ),
@@ -64,7 +68,8 @@ class PracticePage extends ConsumerWidget {
               ),
               child: SafeArea(
                 child: ElevatedButton(
-                  onPressed: () => ref.read(practiceProvider.notifier).nextQuestion(),
+                  onPressed: () =>
+                      ref.read(practiceProvider.notifier).nextQuestion(),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(context).colorScheme.primary,
                     foregroundColor: Colors.white,
@@ -76,6 +81,21 @@ class PracticePage extends ConsumerWidget {
             )
           : null,
     );
+  }
+
+  String _translateWind(String wind) {
+    switch (wind.toLowerCase()) {
+      case 'east':
+        return '東';
+      case 'south':
+        return '南';
+      case 'west':
+        return '西';
+      case 'north':
+        return '北';
+      default:
+        return wind;
+    }
   }
 
   Widget _buildInfoCard(BuildContext context, dynamic question) {
@@ -91,10 +111,28 @@ class PracticePage extends ConsumerWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _InfoItem(label: '状況', value: question.isTsumo ? 'ツモ' : 'ロン', icon: Icons.pan_tool_alt),
-            _InfoItem(label: '親/子', value: question.isDealer ? '親' : '子', icon: Icons.person),
-            _InfoItem(label: '場/自', value: '${question.roundWind.toUpperCase()}/${question.seatWind.toUpperCase()}', icon: Icons.explore),
-            _InfoItem(label: '役', value: '${question.han}翻', icon: Icons.stars, color: Colors.orange.shade700),
+            _InfoItem(
+              label: '状況',
+              value: question.isTsumo ? 'ツモ' : 'ロン',
+              icon: Icons.pan_tool_alt,
+            ),
+            _InfoItem(
+              label: '親/子',
+              value: question.isDealer ? '親' : '子',
+              icon: Icons.person,
+            ),
+            _InfoItem(
+              label: '場/自',
+              value:
+                  '${_translateWind(question.roundWind)}/${_translateWind(question.seatWind)}',
+              icon: Icons.explore,
+            ),
+            _InfoItem(
+              label: '役',
+              value: '${question.han}翻',
+              icon: Icons.stars,
+              color: Colors.orange.shade700,
+            ),
           ],
         ),
       ),
@@ -103,17 +141,8 @@ class PracticePage extends ConsumerWidget {
 
   Widget _buildChoices(BuildContext context, WidgetRef ref, dynamic state) {
     final question = state.currentQuestion;
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 2.2,
-        mainAxisSpacing: 16,
-        crossAxisSpacing: 16,
-      ),
-      itemCount: question.choices.length,
-      itemBuilder: (context, index) {
+    return Column(
+      children: List.generate(question.choices.length, (index) {
         final choice = question.choices[index];
         bool isThisCorrect = index == question.correctChoiceIndex;
         bool isThisSelected = index == state.selectedIndex;
@@ -136,46 +165,61 @@ class PracticePage extends ConsumerWidget {
           border = BorderSide(color: Colors.grey.shade300);
         }
 
-        return InkWell(
-          onTap: () => ref.read(practiceProvider.notifier).selectChoice(index),
-          borderRadius: BorderRadius.circular(16),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            decoration: BoxDecoration(
-              color: bgColor,
-              borderRadius: BorderRadius.circular(16),
-              border: border != null ? Border.fromBorderSide(border) : null,
-              boxShadow: state.isAnswered ? null : [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: InkWell(
+            onTap: () =>
+                ref.read(practiceProvider.notifier).selectChoice(index),
+            borderRadius: BorderRadius.circular(16),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: double.infinity,
+              height: 60,
+              decoration: BoxDecoration(
+                color: bgColor,
+                borderRadius: BorderRadius.circular(16),
+                border: border != null ? Border.fromBorderSide(border) : null,
+                boxShadow: state.isAnswered
+                    ? null
+                    : [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.04),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                '${choice.total}点',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
                 ),
-              ],
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              '${choice.total}点',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: textColor,
               ),
             ),
           ),
         );
-      },
+      }),
     );
   }
 
-  Widget _buildExplanation(BuildContext context, WidgetRef ref, dynamic question, bool isCorrect) {
+  Widget _buildExplanation(
+    BuildContext context,
+    WidgetRef ref,
+    dynamic question,
+    bool isCorrect,
+  ) {
     return Container(
       margin: const EdgeInsets.only(top: 32, bottom: 80),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: isCorrect ? Colors.green.shade50 : Colors.red.shade50,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: isCorrect ? Colors.green.shade100 : Colors.red.shade100),
+        border: Border.all(
+          color: isCorrect ? Colors.green.shade100 : Colors.red.shade100,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -193,7 +237,9 @@ class PracticePage extends ConsumerWidget {
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: isCorrect ? Colors.green.shade700 : Colors.red.shade700,
+                  color: isCorrect
+                      ? Colors.green.shade700
+                      : Colors.red.shade700,
                 ),
               ),
             ],
@@ -201,7 +247,11 @@ class PracticePage extends ConsumerWidget {
           const SizedBox(height: 20),
           Text(
             '正解: ${question.correctScore.total}点',
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87),
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
           ),
           if (question.isTsumo && question.correctScore.dealer != null)
             Padding(
@@ -217,14 +267,22 @@ class PracticePage extends ConsumerWidget {
           ),
           const Text(
             '解説',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
           ),
           const SizedBox(height: 12),
           _buildFuDetail(question),
           const SizedBox(height: 16),
           Text(
             question.explanation,
-            style: const TextStyle(fontSize: 16, height: 1.6, color: Colors.black87),
+            style: const TextStyle(
+              fontSize: 16,
+              height: 1.6,
+              color: Colors.black87,
+            ),
           ),
           const SizedBox(height: 24),
           OutlinedButton.icon(
@@ -233,12 +291,38 @@ class PracticePage extends ConsumerWidget {
             label: const Text('符計算の解説を読み直す'),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           ),
         ],
       ),
     );
+  }
+
+  String _getReading(String name) {
+    const readings = {
+      '副底': 'フーテイ',
+      '門前ロン': 'メンゼンロン',
+      'ツモ': 'ツモ',
+      '中張牌明刻': 'チュンチャンパイミンコー',
+      '中張牌暗刻': 'チュンチャンパイアンコー',
+      '幺九牌明刻': 'ヤオチューパイミンコー',
+      '幺九牌暗刻': 'ヤオチューパイアンコー',
+      '中張牌明槓': 'チュンチャンパイミンカン',
+      '中張牌暗槓': 'チュンチャンパイアンカン',
+      '幺九牌明槓': 'ヤオチューパイミンカン',
+      '幺九牌暗槓': 'ヤオチューパイアンカン',
+      '単騎': 'タンキ',
+      '辺張': 'ペンチャン',
+      '嵌張': 'カンチャン',
+      '両面': 'リャンメン',
+      '双碰': 'シャンポン',
+      '役牌雀頭': 'ヤクハイジャントウ',
+      '七対子固定': 'チートイツコテイ',
+    };
+    return readings[name] ?? '';
   }
 
   Widget _buildFuDetail(dynamic question) {
@@ -250,16 +334,42 @@ class PracticePage extends ConsumerWidget {
       ),
       child: Column(
         children: [
-          ...question.fuBreakdown.map<Widget>((f) => Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(f['name'].toString(), style: const TextStyle(fontSize: 14)),
-                Text('${f['fu']}符', style: const TextStyle(fontWeight: FontWeight.bold)),
-              ],
-            ),
-          )).toList(),
+          ...question.fuBreakdown
+              .map<Widget>(
+                (f) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (_getReading(f['name'].toString()).isNotEmpty)
+                            Text(
+                              _getReading(f['name'].toString()),
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.grey.shade500,
+                              ),
+                            ),
+                          Text(
+                            f['name'].toString(),
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        '${f['fu']}符',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+              .toList(),
           const Divider(height: 24),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -300,7 +410,10 @@ class _InfoItem extends StatelessWidget {
       children: [
         Icon(icon, size: 20, color: color ?? Colors.grey.shade600),
         const SizedBox(height: 4),
-        Text(label, style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+        Text(
+          label,
+          style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+        ),
         Text(
           value,
           style: TextStyle(
@@ -313,4 +426,3 @@ class _InfoItem extends StatelessWidget {
     );
   }
 }
-
